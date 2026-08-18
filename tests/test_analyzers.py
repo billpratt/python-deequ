@@ -491,8 +491,14 @@ class TestAnalyzers(unittest.TestCase):
         self.assertEqual(self.MinLength("a"), [])
 
     def test_MutualInformation(self):
-        self.assertEqual(self.MutualInformation(["b", "c"]), [Row(value=0.7324081924454064)])
-        self.assertEqual(self.MutualInformation(["b", "d"]), [Row(value=0.6365141682948128)])
+        # Spark 3.5 and 4.1 can differ by one ULP in mutual information results.
+        for columns, expected in [
+            (["b", "c"], 0.7324081924454064),
+            (["b", "d"], 0.6365141682948128),
+        ]:
+            result = self.MutualInformation(columns)
+            self.assertEqual(len(result), 1)
+            self.assertAlmostEqual(result[0].value, expected, delta=1e-15)
 
     @pytest.mark.xfail(reason="@unittest.expectedFailure")
     def test_fail_MutualInformation(self):
