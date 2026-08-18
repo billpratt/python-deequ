@@ -77,7 +77,8 @@ def to_scala_seq(jvm, iterable):
     Returns:
         Scala sequence
     """
-    return jvm.scala.collection.JavaConverters.iterableAsScalaIterable(iterable).toSeq()
+    # toSeq yields Stream on Scala 2.12 and List on 2.13; List is a compatible Seq on both.
+    return jvm.scala.collection.JavaConverters.iterableAsScalaIterable(iterable).toList()
 
 
 def to_scala_map(spark_session, d):
