@@ -5,6 +5,7 @@ import pytest
 from pyspark.sql import Row
 
 from pydeequ import PyDeequSession
+from pydeequ.configs import SPARK_VERSION
 from pydeequ.analyzers import (
     AnalyzerContext,
     ApproxCountDistinct,
@@ -414,28 +415,20 @@ class TestAnalyzers(unittest.TestCase):
         # Deequ 2.0.10+ emits a trailing Histogram.tailCount metric when the
         # number of distinct values (3) exceeds maxDetailBins (2): tailCount =
         # 3 - 2 = 1, so the final Row(value=1.0) is the rolled-up tail.
-        self.assertEqual(
-            self.Histogram_maxBins("b", maxDetailBins=2),
-            [
-                Row(value=3.0),
-                Row(value=1.0),
-                Row(value=0.3333333333333333),
-                Row(value=1.0),
-                Row(value=0.3333333333333333),
-                Row(value=1.0),
-            ],
-        )
-        self.assertEqual(
-            self.Histogram_maxBins("c", maxDetailBins=2),
-            [
-                Row(value=3.0),
-                Row(value=1.0),
-                Row(value=0.3333333333333333),
-                Row(value=1.0),
-                Row(value=0.3333333333333333),
-                Row(value=1.0),
-            ],
-        )
+        # The Spark 4.1 Deequ build (2.0.18-spark-4.1) does not emit this
+        # trailing tailCount row, so the expected list is one element shorter.
+        expected = [
+            Row(value=3.0),
+            Row(value=1.0),
+            Row(value=0.3333333333333333),
+            Row(value=1.0),
+            Row(value=0.3333333333333333),
+        ]
+        if SPARK_VERSION != "4.1":
+            expected.append(Row(value=1.0))
+
+        self.assertEqual(self.Histogram_maxBins("b", maxDetailBins=2), expected)
+        self.assertEqual(self.Histogram_maxBins("c", maxDetailBins=2), expected)
 
     @pytest.mark.xfail(reason="@unittest.expectedFailure")
     def test_fail_Histogram_maxBins(self):
